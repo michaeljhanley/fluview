@@ -1,0 +1,80 @@
+---
+title: "FluView Data Validation"
+format: html
+editor: visual
+---
+
+Install & load dependencies
+
+```{r}
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+pacman::p_load(tidyverse, lubridate, readxl, nanoparquet, visdat, dlookr, validate, naniar, usethis)
+```
+
+Load path name from .Renviron
+{-} TO-DO: Double-check after changing over to API pull instead of CSV
+
+```{r}
+data_dir <- Sys.getenv("DATA_DIR")
+if (data_dir == "") stop("DATA_DIR environment variable is not set")
+file_path <- file.path(data_dir, "raw_test_data.csv")
+if (!file.exists(file_path)) stop("File does not exist at the given path.")
+```
+
+Open file into a tibble, glimpse to confirm:
+
+```{r}
+data <- read_csv(file_path)
+glimpse(data)
+```
+"num_age_2" is of type <lgl>, so let's check to see if every value is NA
+
+```{r}
+all(is.na(data$num_age_2))
+```
+
+Dropping "num_age_2" because all values are NA
+
+```{r}
+data <- select(data, -num_age_2)
+glimpse(data)
+```
+
+Loop through columns and sort them by type
+
+```{r}
+categorize_columns <- function(df) {
+  col_types <- list()
+  
+  for (col in names(df)) {
+    col_type <- class(df[[col]])[1]  # Take the first class if multiple
+    
+    if (!col_type %in% names(col_types)) {
+      col_types[[col_type]] <- c()
+    }
+    
+    col_types[[col_type]] <- c(col_types[[col_type]], col)
+  }
+  
+  # Remove empty categories
+  col_types <- col_types[sapply(col_types, length) > 0]
+  
+  # Print summary information
+  cat("Column types present in the dataframe:\n")
+  for (type in names(col_types)) {
+    cat(sprintf("- %s: %d columns stored in variable `%s_cols`\n", 
+                type, length(col_types[[type]]), type))
+  }
+  
+  return(col_types)
+}
+
+categorized_columns <- categorize_columns(data)
+print(categorized_columns)
+```
+
+Loop through numeric columns to see if they can be converted to integers in cleaning
+
+```{r}
+
+```
