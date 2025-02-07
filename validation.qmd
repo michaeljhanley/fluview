@@ -40,6 +40,17 @@ data <- select(data, -num_age_2)
 glimpse(data)
 ```
 
+Set up config chunk
+
+```{r}
+config <- list(
+  date_bounds = list(
+    min = ymd("2000-01-01"),
+    max = ymd("2001-01-01")
+  )
+)
+```
+
 Loop through columns and sort them by type
 
 ```{r}
@@ -73,8 +84,18 @@ categorized_columns <- categorize_columns(data)
 print(categorized_columns)
 ```
 
-Loop through numeric columns to see if they can be converted to integers in cleaning
+Loop through numeric columns to see if they can be converted to integers in cleaning.
+Initializing with a vector instead of a list because we're only looping through 15 elements max
 
 ```{r}
+convert_to_integers <- character()
 
+for (numeric_column in categorized_columns$numeric) {
+  if (all(round(data[[numeric_column]]) == data[[numeric_column]] & !is.na(data[[numeric_column]]))) {
+    convert_to_integers <- c(convert_to_integers, numeric_column)
+  }
+}
+
+print(convert_to_integers)
 ```
+
