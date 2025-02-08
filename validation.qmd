@@ -8,7 +8,7 @@ Install & load dependencies
 
 ```{r}
 if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
-pacman::p_load(tidyverse, lubridate, readxl, nanoparquet, visdat, dlookr, validate, naniar, usethis)
+pacman::p_load(tidyverse, lubridate, readxl, nanoparquet, visdat, dlookr, validate, naniar, usethis, purrr, patchwork, htmltools, gridExtra)
 ```
 
 Load path name from .Renviron
@@ -27,7 +27,18 @@ Open file into a tibble, glimpse to confirm:
 data <- read_csv(file_path)
 glimpse(data)
 ```
-"num_age_2" is of type <lgl>, so let's check to see if every value is NA
+
+Initial diagnoses
+
+```{r}
+diagnose(data)
+```
+
+```{r}
+diagnose_outlier(data)
+```
+
+Column "num_age_2" is of type <lgl>, so let's double-check to see if every value is NA
 
 ```{r}
 all(is.na(data$num_age_2))
@@ -38,17 +49,6 @@ Dropping "num_age_2" because all values are NA
 ```{r}
 data <- select(data, -num_age_2)
 glimpse(data)
-```
-
-Set up config chunk
-
-```{r}
-config <- list(
-  date_bounds = list(
-    min = ymd("2000-01-01"),
-    max = ymd("2001-01-01")
-  )
-)
 ```
 
 Loop through columns and sort them by type
@@ -97,5 +97,44 @@ for (numeric_column in categorized_columns$numeric) {
 }
 
 print(convert_to_integers)
+```
+
+Visualize outliers for all numeric columns using histograms
+
+```{r}
+plots <- purrr::map(categorized_columns$numeric, function(col) {
+  # Calculate IQR boundaries
+  q1 <- quantile(data[[col]], 0.25, na.rm = TRUE)
+  q3 <- quantile(data[[col]], 0.75, na.rm = TRUE)
+  iqr <- q3 - q1
+  iqr_lower <- q1 - 1.5 * iqr
+  iqr_upper <- q3 + 1.5 * iqr
+  
+  # Calculate 3-sigma boundaries
+  mean_val <- mean(data[[col]], na.rm = TRUE)
+  sd_val <- sd(data[[col]], na.rm = TRUE)
+  sigma_lower <- mean_val - 3 * sd_val
+  sigma_upper <- mean_val + 3 * sd_val
+  
+  ggplot(data) +
+    geom_histogram(aes(x = .data[[col]]), bins = 30, fill = "steelblue", color = "white") +
+    # Add IQR rule lines in red
+    geom_vline(xintercept = c(iqr_lower, iqr_upper), 
+               color = "red", linetype = "dashed", linewidth = 1) +
+    # Add 3-sigma rule lines in green
+    geom_vline(xintercept = c(sigma_lower, sigma_upper), 
+               color = "darkgreen", linetype = "dashed", linewidth = 1) +
+    labs(title = paste("Distribution of", col),
+         subtitle = "Red: IQR outlier bounds | Green: 3-sigma bounds",
+         x = col,
+         y = "Count") +
+    theme_minimal()
+})
+plots
+```
+All of these look expected, though the blip on num_patients is worth exploring
+
+```{r}
+examine_outliers <- c("num_patients")
 ```
 
