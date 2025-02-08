@@ -8,7 +8,7 @@ Install & load dependencies
 
 ```{r}
 if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
-pacman::p_load(tidyverse, lubridate, readxl, nanoparquet, visdat, dlookr, validate, naniar, usethis, purrr, patchwork, htmltools, gridExtra)
+pacman::p_load(tidyverse, lubridate, readxl, nanoparquet, visdat, dlookr, validate, naniar, usethis, purrr)
 ```
 
 Load path name from .Renviron
@@ -138,3 +138,31 @@ All of these look expected, though the blip on num_patients is worth exploring
 examine_outliers <- c("num_patients")
 ```
 
+Identify duplicates, if any
+
+```{r}
+data %>%
+  group_by_all() %>%
+  filter(n()>1) %>%
+  ungroup() %>%
+  print()
+```
+
+No duplicate rows found.
+
+Flag "region" as a column that can be recast as factor in cleaning
+
+```{r}
+columns_to_recast <- c("region")
+```
+
+View unique values in "region" category column
+
+```{r}
+unique(data$region)
+```
+
+No unexpected values found.
+
+Convert date columns to lubridate's Date format
+Would normally 
