@@ -84,6 +84,33 @@ categorized_columns <- categorize_columns(data)
 print(categorized_columns)
 ```
 
+Recast to-do list:
+[x] $Date to dttm
+[x] $character to factor
+[x] Some $numeric to integer
+
+Convert $Date columns to lubridate POSIXct in ymd format for validation
+
+```{r}
+data <- data %>%
+  mutate(across(all_of(categorized_columns$Date), 
+                ~as.POSIXct(ymd(.))))
+```
+
+View unique values in "region" category column to ensure categorical constraints
+
+```{r}
+unique(data$region)
+```
+
+No unexpected values found. Convert $character column to factors
+
+```{r}
+data <- data %>%
+  mutate(across(all_of(categorized_columns$character), 
+                ~as_factor(.)))
+```
+
 Loop through numeric columns to see if they can be converted to integers in cleaning.
 Initializing with a vector instead of a list because we're only looping through 15 elements max
 
@@ -132,11 +159,59 @@ plots <- purrr::map(categorized_columns$numeric, function(col) {
 })
 plots
 ```
+
 All of these look expected, though the blip on num_patients is worth exploring
 
 ```{r}
-examine_outliers <- c("num_patients")
+# Calculate IQR boundaries
+q1 <- quantile(data$num_providers, 0.25, na.rm = TRUE)
+q3 <- quantile(data$num_providers, 0.75, na.rm = TRUE)
+iqr <- q3 - q1
+iqr_lower <- q1 - 1.5 * iqr
+iqr_upper <- q3 + 1.5 * iqr
+
+# Calculate 3-sigma boundaries
+mean_val <- mean(data$num_providers, na.rm = TRUE)
+sd_val <- sd(data$num_providers, na.rm = TRUE)
+sigma_lower <- mean_val - 3 * sd_val
+sigma_upper <- mean_val + 3 * sd_val
+
+# Time series plot
+time_plot <- ggplot(data) +
+  geom_line(aes(x = epiweek, y = num_providers), color = "steelblue") +
+  # Add IQR bounds
+  geom_hline(yintercept = c(iqr_lower, iqr_upper), 
+             color = "red", linetype = "dashed", linewidth = 1) +
+  # Add 3-sigma bounds
+  geom_hline(yintercept = c(sigma_lower, sigma_upper), 
+             color = "darkgreen", linetype = "dashed", linewidth = 1) +
+  # Highlight outlier points
+  geom_point(data = data %>% 
+               filter(num_providers > iqr_upper | num_providers < iqr_lower),
+             aes(x = epiweek, y = num_providers),
+             color = "red", size = 3) +
+  labs(title = "Healthcare Providers Over Time",
+       subtitle = "Red: IQR outlier bounds | Green: 3-sigma bounds",
+       x = "Epiweek",
+       y = "Number of Providers") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Added angle for better readability
+
+# Box plot by week
+box_plot <- ggplot(data) +
+  geom_boxplot(aes(x = factor(epiweek), y = num_providers)) +
+  labs(title = "Distribution of Providers by Week",
+       x = "Epiweek",
+       y = "Number of Providers") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank())
+
+# Arrange plots using gridExtra
+library(gridExtra)
+grid.arrange(time_plot, box_plot, ncol = 1)
 ```
+
+All of the outliers appear to have happened in 2019. Let's come back to this in EDA
 
 Identify duplicates, if any
 
@@ -150,19 +225,15 @@ data %>%
 
 No duplicate rows found.
 
-Flag "region" as a column that can be recast as factor in cleaning
+Misc. validation tasks:
+
+[ ] String length violations (region has to be 5 or less characters)
+[ ] Number range constraints (none of our numeric columns can be negative)
+[ ] Cross-field validation, if applicable (num_ili has to equal sum of age 0 through 5)
+[ ] Start and end date validation (Data can't be before week 40 of 2014, or after week 22 of 2019)
 
 ```{r}
-columns_to_recast <- c("region")
+rules <- validator(
+  
+)
 ```
-
-View unique values in "region" category column
-
-```{r}
-unique(data$region)
-```
-
-No unexpected values found.
-
-Convert date columns to lubridate's Date format
-Would normally 
