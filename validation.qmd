@@ -197,18 +197,7 @@ time_plot <- ggplot(data) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Added angle for better readability
 
-# Box plot by week
-box_plot <- ggplot(data) +
-  geom_boxplot(aes(x = factor(epiweek), y = num_providers)) +
-  labs(title = "Distribution of Providers by Week",
-       x = "Epiweek",
-       y = "Number of Providers") +
-  theme_minimal() +
-  theme(axis.text.x = element_blank())
-
-# Arrange plots using gridExtra
-library(gridExtra)
-grid.arrange(time_plot, box_plot, ncol = 1)
+time_plot
 ```
 
 All of the outliers appear to have happened in 2019. Let's come back to this in EDA
@@ -225,15 +214,45 @@ data %>%
 
 No duplicate rows found.
 
-Misc. validation tasks:
+Misc. remaining validation tasks:
 
-[ ] String length violations (region has to be 5 or less characters)
-[ ] Number range constraints (none of our numeric columns can be negative)
-[ ] Cross-field validation, if applicable (num_ili has to equal sum of age 0 through 5)
-[ ] Start and end date validation (Data can't be before week 40 of 2014, or after week 22 of 2019)
+[x] String length violations (region has to be 5 or less characters)
+[x] Number range constraints (none of our numeric columns can be negative)
+[x] Cross-field validation (num_ili has to equal sum of age 0 through 5)
+[x] Start and end date validation (Data can't be before week 40 of 2014)
 
 ```{r}
+# Misc. validation config
+year_start <- 2014
+epiweek_start <- 40
+numeric_column_floor <- 0
+
+# Validator object & check
 rules <- validator(
-  
+  release_date = epiweek(release_date) >= epiweek_start | year(release_date) > year_start,
+  epiweek = epiweek(epiweek) >= epiweek_start | year(epiweek) > year_start,
+  issue = epiweek(issue) >= epiweek_start | year(issue) > year_start,
+  num_ili_sums = num_ili == num_age_0 + num_age_1 + num_age_3 + num_age_4 + num_age_5,
+  lag = lag >= numeric_column_floor,
+  num_ili = num_ili >= numeric_column_floor,
+  patients = num_patients >= numeric_column_floor, 
+  providers = num_providers >= numeric_column_floor,
+  age_0 = num_age_0 >= numeric_column_floor,
+  age_1 = num_age_1 >= numeric_column_floor, 
+  age_3 = num_age_3 >= numeric_column_floor,
+  age_4 = num_age_4 >= numeric_column_floor,
+  age_5 = num_age_5 >= numeric_column_floor,
+  wili = wili >= numeric_column_floor,
+  ili = ili >= numeric_column_floor,
+  region_character_length = nchar(as.character(region)) <= 5
 )
+
+check <- confront(data, rules)
+summary(check)
+```
+
+Write to parquet for type preservation
+
+```{r}
+write_parquet(data, "validated_data.parquet")
 ```

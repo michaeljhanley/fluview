@@ -99,7 +99,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Install &amp; load dependencies</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">requireNamespace</span>(<span class="st">"pacman"</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) <span class="fu">install.packages</span>(<span class="st">"pacman"</span>)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse, lubridate, readxl, nanoparquet, visdat, dlookr, validate, naniar, usethis, purrr, patchwork, htmltools, gridExtra)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse, lubridate, readxl, nanoparquet, visdat, dlookr, validate, naniar, usethis, purrr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Load path name from .Renviron {-} TO-DO: Double-check after changing over to API pull instead of CSV</p>
 <div class="cell">
@@ -269,17 +269,38 @@ $numeric
  [9] "num_age_5"     "wili"          "ili"          </code></pre>
 </div>
 </div>
+<p>Recast to-do list: [x] $Date to dttm [x] $character to factor [x] Some $numeric to integer</p>
+<p>Convert $Date columns to lubridate POSIXct in ymd format for validation</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">all_of</span>(categorized_columns<span class="sc">$</span>Date), </span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>                <span class="sc">~</span><span class="fu">as.POSIXct</span>(<span class="fu">ymd</span>(.))))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>View unique values in “region” category column to ensure categorical constraints</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">unique</span>(data<span class="sc">$</span>region)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "hhs1"  "hhs10" "hhs2"  "hhs3"  "hhs4"  "hhs5"  "hhs6"  "hhs7"  "hhs8" 
+[10] "hhs9" </code></pre>
+</div>
+</div>
+<p>No unexpected values found. Convert $character column to factors</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">all_of</span>(categorized_columns<span class="sc">$</span>character), </span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>                <span class="sc">~</span><span class="fu">as_factor</span>(.)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 <p>Loop through numeric columns to see if they can be converted to integers in cleaning. Initializing with a vector instead of a list because we’re only looping through 15 elements max</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>convert_to_integers <span class="ot">&lt;-</span> <span class="fu">character</span>()</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (numeric_column <span class="cf">in</span> categorized_columns<span class="sc">$</span>numeric) {</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">all</span>(<span class="fu">round</span>(data[[numeric_column]]) <span class="sc">==</span> data[[numeric_column]] <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(data[[numeric_column]]))) {</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    convert_to_integers <span class="ot">&lt;-</span> <span class="fu">c</span>(convert_to_integers, numeric_column)</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(convert_to_integers)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>convert_to_integers <span class="ot">&lt;-</span> <span class="fu">character</span>()</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (numeric_column <span class="cf">in</span> categorized_columns<span class="sc">$</span>numeric) {</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">all</span>(<span class="fu">round</span>(data[[numeric_column]]) <span class="sc">==</span> data[[numeric_column]] <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(data[[numeric_column]]))) {</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    convert_to_integers <span class="ot">&lt;-</span> <span class="fu">c</span>(convert_to_integers, numeric_column)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(convert_to_integers)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "lag"           "num_ili"       "num_patients"  "num_providers"
 [5] "num_age_0"     "num_age_1"     "num_age_3"     "num_age_4"    
@@ -288,42 +309,42 @@ $numeric
 </div>
 <p>Visualize outliers for all numeric columns using histograms</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>plots <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map</span>(categorized_columns<span class="sc">$</span>numeric, <span class="cf">function</span>(col) {</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate IQR boundaries</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  q1 <span class="ot">&lt;-</span> <span class="fu">quantile</span>(data[[col]], <span class="fl">0.25</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  q3 <span class="ot">&lt;-</span> <span class="fu">quantile</span>(data[[col]], <span class="fl">0.75</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  iqr <span class="ot">&lt;-</span> q3 <span class="sc">-</span> q1</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  iqr_lower <span class="ot">&lt;-</span> q1 <span class="sc">-</span> <span class="fl">1.5</span> <span class="sc">*</span> iqr</span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  iqr_upper <span class="ot">&lt;-</span> q3 <span class="sc">+</span> <span class="fl">1.5</span> <span class="sc">*</span> iqr</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate 3-sigma boundaries</span></span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  mean_val <span class="ot">&lt;-</span> <span class="fu">mean</span>(data[[col]], <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  sd_val <span class="ot">&lt;-</span> <span class="fu">sd</span>(data[[col]], <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  sigma_lower <span class="ot">&lt;-</span> mean_val <span class="sc">-</span> <span class="dv">3</span> <span class="sc">*</span> sd_val</span>
-<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  sigma_upper <span class="ot">&lt;-</span> mean_val <span class="sc">+</span> <span class="dv">3</span> <span class="sc">*</span> sd_val</span>
-<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(data) <span class="sc">+</span></span>
-<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_histogram</span>(<span class="fu">aes</span>(<span class="at">x =</span> .data[[col]]), <span class="at">bins =</span> <span class="dv">30</span>, <span class="at">fill =</span> <span class="st">"steelblue"</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span></span>
-<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Add IQR rule lines in red</span></span>
-<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">c</span>(iqr_lower, iqr_upper), </span>
-<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>               <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Add 3-sigma rule lines in green</span></span>
-<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">c</span>(sigma_lower, sigma_upper), </span>
-<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>               <span class="at">color =</span> <span class="st">"darkgreen"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Distribution of"</span>, col),</span>
-<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>         <span class="at">subtitle =</span> <span class="st">"Red: IQR outlier bounds | Green: 3-sigma bounds"</span>,</span>
-<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>         <span class="at">x =</span> col,</span>
-<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>         <span class="at">y =</span> <span class="st">"Count"</span>) <span class="sc">+</span></span>
-<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>()</span>
-<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a>plots</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>plots <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map</span>(categorized_columns<span class="sc">$</span>numeric, <span class="cf">function</span>(col) {</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate IQR boundaries</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  q1 <span class="ot">&lt;-</span> <span class="fu">quantile</span>(data[[col]], <span class="fl">0.25</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  q3 <span class="ot">&lt;-</span> <span class="fu">quantile</span>(data[[col]], <span class="fl">0.75</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  iqr <span class="ot">&lt;-</span> q3 <span class="sc">-</span> q1</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  iqr_lower <span class="ot">&lt;-</span> q1 <span class="sc">-</span> <span class="fl">1.5</span> <span class="sc">*</span> iqr</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>  iqr_upper <span class="ot">&lt;-</span> q3 <span class="sc">+</span> <span class="fl">1.5</span> <span class="sc">*</span> iqr</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate 3-sigma boundaries</span></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>  mean_val <span class="ot">&lt;-</span> <span class="fu">mean</span>(data[[col]], <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>  sd_val <span class="ot">&lt;-</span> <span class="fu">sd</span>(data[[col]], <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>  sigma_lower <span class="ot">&lt;-</span> mean_val <span class="sc">-</span> <span class="dv">3</span> <span class="sc">*</span> sd_val</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>  sigma_upper <span class="ot">&lt;-</span> mean_val <span class="sc">+</span> <span class="dv">3</span> <span class="sc">*</span> sd_val</span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(data) <span class="sc">+</span></span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_histogram</span>(<span class="fu">aes</span>(<span class="at">x =</span> .data[[col]]), <span class="at">bins =</span> <span class="dv">30</span>, <span class="at">fill =</span> <span class="st">"steelblue"</span>, <span class="at">color =</span> <span class="st">"white"</span>) <span class="sc">+</span></span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Add IQR rule lines in red</span></span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">c</span>(iqr_lower, iqr_upper), </span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>               <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Add 3-sigma rule lines in green</span></span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">c</span>(sigma_lower, sigma_upper), </span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a>               <span class="at">color =</span> <span class="st">"darkgreen"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Distribution of"</span>, col),</span>
+<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>         <span class="at">subtitle =</span> <span class="st">"Red: IQR outlier bounds | Green: 3-sigma bounds"</span>,</span>
+<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a>         <span class="at">x =</span> col,</span>
+<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>         <span class="at">y =</span> <span class="st">"Count"</span>) <span class="sc">+</span></span>
+<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>()</span>
+<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>plots</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]</code></pre>
 </div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -334,7 +355,7 @@ $numeric
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-2.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-2.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -345,7 +366,7 @@ $numeric
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-3.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-3.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -356,7 +377,7 @@ $numeric
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-4.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-4.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -367,7 +388,7 @@ $numeric
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-5.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-5.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -378,7 +399,7 @@ $numeric
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-6.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-6.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -389,7 +410,7 @@ $numeric
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-7.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-7.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -400,7 +421,7 @@ $numeric
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-8.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-8.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -411,7 +432,7 @@ $numeric
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-9.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-9.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -422,7 +443,7 @@ $numeric
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-10.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-10.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -433,14 +454,143 @@ $numeric
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="validation_files/figure-html/unnamed-chunk-10-11.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="validation_files/figure-html/unnamed-chunk-13-11.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
 </div>
 <p>All of these look expected, though the blip on num_patients is worth exploring</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>examine_outliers <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"num_patients"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate IQR boundaries</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>q1 <span class="ot">&lt;-</span> <span class="fu">quantile</span>(data<span class="sc">$</span>num_providers, <span class="fl">0.25</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>q3 <span class="ot">&lt;-</span> <span class="fu">quantile</span>(data<span class="sc">$</span>num_providers, <span class="fl">0.75</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>iqr <span class="ot">&lt;-</span> q3 <span class="sc">-</span> q1</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>iqr_lower <span class="ot">&lt;-</span> q1 <span class="sc">-</span> <span class="fl">1.5</span> <span class="sc">*</span> iqr</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>iqr_upper <span class="ot">&lt;-</span> q3 <span class="sc">+</span> <span class="fl">1.5</span> <span class="sc">*</span> iqr</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate 3-sigma boundaries</span></span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>mean_val <span class="ot">&lt;-</span> <span class="fu">mean</span>(data<span class="sc">$</span>num_providers, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>sd_val <span class="ot">&lt;-</span> <span class="fu">sd</span>(data<span class="sc">$</span>num_providers, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>sigma_lower <span class="ot">&lt;-</span> mean_val <span class="sc">-</span> <span class="dv">3</span> <span class="sc">*</span> sd_val</span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>sigma_upper <span class="ot">&lt;-</span> mean_val <span class="sc">+</span> <span class="dv">3</span> <span class="sc">*</span> sd_val</span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Time series plot</span></span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>time_plot <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(data) <span class="sc">+</span></span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> epiweek, <span class="at">y =</span> num_providers), <span class="at">color =</span> <span class="st">"steelblue"</span>) <span class="sc">+</span></span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add IQR bounds</span></span>
+<span id="cb37-18"><a href="#cb37-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fu">c</span>(iqr_lower, iqr_upper), </span>
+<span id="cb37-19"><a href="#cb37-19" aria-hidden="true" tabindex="-1"></a>             <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb37-20"><a href="#cb37-20" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add 3-sigma bounds</span></span>
+<span id="cb37-21"><a href="#cb37-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fu">c</span>(sigma_lower, sigma_upper), </span>
+<span id="cb37-22"><a href="#cb37-22" aria-hidden="true" tabindex="-1"></a>             <span class="at">color =</span> <span class="st">"darkgreen"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb37-23"><a href="#cb37-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Highlight outlier points</span></span>
+<span id="cb37-24"><a href="#cb37-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">data =</span> data <span class="sc">%&gt;%</span> </span>
+<span id="cb37-25"><a href="#cb37-25" aria-hidden="true" tabindex="-1"></a>               <span class="fu">filter</span>(num_providers <span class="sc">&gt;</span> iqr_upper <span class="sc">|</span> num_providers <span class="sc">&lt;</span> iqr_lower),</span>
+<span id="cb37-26"><a href="#cb37-26" aria-hidden="true" tabindex="-1"></a>             <span class="fu">aes</span>(<span class="at">x =</span> epiweek, <span class="at">y =</span> num_providers),</span>
+<span id="cb37-27"><a href="#cb37-27" aria-hidden="true" tabindex="-1"></a>             <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb37-28"><a href="#cb37-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Healthcare Providers Over Time"</span>,</span>
+<span id="cb37-29"><a href="#cb37-29" aria-hidden="true" tabindex="-1"></a>       <span class="at">subtitle =</span> <span class="st">"Red: IQR outlier bounds | Green: 3-sigma bounds"</span>,</span>
+<span id="cb37-30"><a href="#cb37-30" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Epiweek"</span>,</span>
+<span id="cb37-31"><a href="#cb37-31" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Number of Providers"</span>) <span class="sc">+</span></span>
+<span id="cb37-32"><a href="#cb37-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb37-33"><a href="#cb37-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">hjust =</span> <span class="dv">1</span>))  <span class="co"># Added angle for better readability</span></span>
+<span id="cb37-34"><a href="#cb37-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-35"><a href="#cb37-35" aria-hidden="true" tabindex="-1"></a>time_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="validation_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>All of the outliers appear to have happened in 2019. Let’s come back to this in EDA</p>
+<p>Identify duplicates, if any</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>data <span class="sc">%&gt;%</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by_all</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">n</span>()<span class="sc">&gt;</span><span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 0 × 15
+# ℹ 15 variables: release_date &lt;dttm&gt;, region &lt;fct&gt;, issue &lt;dttm&gt;,
+#   epiweek &lt;dttm&gt;, lag &lt;dbl&gt;, num_ili &lt;dbl&gt;, num_patients &lt;dbl&gt;,
+#   num_providers &lt;dbl&gt;, num_age_0 &lt;dbl&gt;, num_age_1 &lt;dbl&gt;, num_age_3 &lt;dbl&gt;,
+#   num_age_4 &lt;dbl&gt;, num_age_5 &lt;dbl&gt;, wili &lt;dbl&gt;, ili &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<p>No duplicate rows found.</p>
+<p>Misc. remaining validation tasks:</p>
+<p>[x] String length violations (region has to be 5 or less characters) [x] Number range constraints (none of our numeric columns can be negative) [x] Cross-field validation (num_ili has to equal sum of age 0 through 5) [x] Start and end date validation (Data can’t be before week 40 of 2014)</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Misc. validation config</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>year_start <span class="ot">&lt;-</span> <span class="dv">2014</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>epiweek_start <span class="ot">&lt;-</span> <span class="dv">40</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>numeric_column_floor <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Validator object &amp; check</span></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>rules <span class="ot">&lt;-</span> <span class="fu">validator</span>(</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">release_date =</span> <span class="fu">epiweek</span>(release_date) <span class="sc">&gt;=</span> epiweek_start <span class="sc">|</span> <span class="fu">year</span>(release_date) <span class="sc">&gt;</span> year_start,</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">epiweek =</span> <span class="fu">epiweek</span>(epiweek) <span class="sc">&gt;=</span> epiweek_start <span class="sc">|</span> <span class="fu">year</span>(epiweek) <span class="sc">&gt;</span> year_start,</span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">issue =</span> <span class="fu">epiweek</span>(issue) <span class="sc">&gt;=</span> epiweek_start <span class="sc">|</span> <span class="fu">year</span>(issue) <span class="sc">&gt;</span> year_start,</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">num_ili_sums =</span> num_ili <span class="sc">==</span> num_age_0 <span class="sc">+</span> num_age_1 <span class="sc">+</span> num_age_3 <span class="sc">+</span> num_age_4 <span class="sc">+</span> num_age_5,</span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">lag =</span> lag <span class="sc">&gt;=</span> numeric_column_floor,</span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">num_ili =</span> num_ili <span class="sc">&gt;=</span> numeric_column_floor,</span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">patients =</span> num_patients <span class="sc">&gt;=</span> numeric_column_floor, </span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">providers =</span> num_providers <span class="sc">&gt;=</span> numeric_column_floor,</span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">age_0 =</span> num_age_0 <span class="sc">&gt;=</span> numeric_column_floor,</span>
+<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">age_1 =</span> num_age_1 <span class="sc">&gt;=</span> numeric_column_floor, </span>
+<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">age_3 =</span> num_age_3 <span class="sc">&gt;=</span> numeric_column_floor,</span>
+<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">age_4 =</span> num_age_4 <span class="sc">&gt;=</span> numeric_column_floor,</span>
+<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">age_5 =</span> num_age_5 <span class="sc">&gt;=</span> numeric_column_floor,</span>
+<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">wili =</span> wili <span class="sc">&gt;=</span> numeric_column_floor,</span>
+<span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">ili =</span> ili <span class="sc">&gt;=</span> numeric_column_floor,</span>
+<span id="cb40-23"><a href="#cb40-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">region_character_length =</span> <span class="fu">nchar</span>(<span class="fu">as.character</span>(region)) <span class="sc">&lt;=</span> <span class="dv">5</span></span>
+<span id="cb40-24"><a href="#cb40-24" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb40-25"><a href="#cb40-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-26"><a href="#cb40-26" aria-hidden="true" tabindex="-1"></a>check <span class="ot">&lt;-</span> <span class="fu">confront</span>(data, rules)</span>
+<span id="cb40-27"><a href="#cb40-27" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(check)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                      name items passes fails nNA error warning
+1             release_date  2440   2440     0   0 FALSE   FALSE
+2                  epiweek  2440   2440     0   0 FALSE   FALSE
+3                    issue  2440   2440     0   0 FALSE   FALSE
+4             num_ili_sums  2440   2440     0   0 FALSE   FALSE
+5                      lag  2440   2440     0   0 FALSE   FALSE
+6                  num_ili  2440   2440     0   0 FALSE   FALSE
+7                 patients  2440   2440     0   0 FALSE   FALSE
+8                providers  2440   2440     0   0 FALSE   FALSE
+9                    age_0  2440   2440     0   0 FALSE   FALSE
+10                   age_1  2440   2440     0   0 FALSE   FALSE
+11                   age_3  2440   2440     0   0 FALSE   FALSE
+12                   age_4  2440   2440     0   0 FALSE   FALSE
+13                   age_5  2440   2440     0   0 FALSE   FALSE
+14                    wili  2440   2440     0   0 FALSE   FALSE
+15                     ili  2440   2440     0   0 FALSE   FALSE
+16 region_character_length  2440   2440     0   0 FALSE   FALSE
+                                                                            expression
+1             epiweek(release_date) &gt;= epiweek_start | year(release_date) &gt; year_start
+2                       epiweek(epiweek) &gt;= epiweek_start | year(epiweek) &gt; year_start
+3                           epiweek(issue) &gt;= epiweek_start | year(issue) &gt; year_start
+4  abs(num_ili - (num_age_0 + num_age_1 + num_age_3 + num_age_4 + num_age_5)) &lt;= 1e-08
+5                                                 lag - numeric_column_floor &gt;= -1e-08
+6                                             num_ili - numeric_column_floor &gt;= -1e-08
+7                                        num_patients - numeric_column_floor &gt;= -1e-08
+8                                       num_providers - numeric_column_floor &gt;= -1e-08
+9                                           num_age_0 - numeric_column_floor &gt;= -1e-08
+10                                          num_age_1 - numeric_column_floor &gt;= -1e-08
+11                                          num_age_3 - numeric_column_floor &gt;= -1e-08
+12                                          num_age_4 - numeric_column_floor &gt;= -1e-08
+13                                          num_age_5 - numeric_column_floor &gt;= -1e-08
+14                                               wili - numeric_column_floor &gt;= -1e-08
+15                                                ili - numeric_column_floor &gt;= -1e-08
+16                                                    nchar(as.character(region)) &lt;= 5</code></pre>
+</div>
+</div>
+<p>Write to parquet for type preservation</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_parquet</span>(data, <span class="st">"validated_data.parquet"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 
 </main>
