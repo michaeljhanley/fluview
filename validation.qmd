@@ -8,11 +8,10 @@ Install & load dependencies
 
 ```{r}
 if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
-pacman::p_load(tidyverse, lubridate, readxl, nanoparquet, visdat, dlookr, validate, naniar, usethis, purrr)
+pacman::p_load(tidyverse, lubridate, readxl, nanoparquet, visdat, dlookr, validate, naniar, usethis, purrr, arrow, nolock, knitr)
 ```
 
-Load path name from .Renviron
-{-} TO-DO: Double-check after changing over to API pull instead of CSV
+Load path name from .Renviron {-} TO-DO: Double-check after changing over to API pull instead of CSV
 
 ```{r}
 data_dir <- Sys.getenv("DATA_DIR")
@@ -84,12 +83,9 @@ categorized_columns <- categorize_columns(data)
 print(categorized_columns)
 ```
 
-Recast to-do list:
-[x] $Date to dttm
-[x] $character to factor
-[x] Some $numeric to integer
+Recast to-do list: \[x\] \$Date to dttm \[x\] \$character to factor \[x\] Some \$numeric to integer
 
-Convert $Date columns to lubridate POSIXct in ymd format for validation
+Convert \$Date columns to lubridate POSIXct in ymd format for validation
 
 ```{r}
 data <- data %>%
@@ -103,7 +99,7 @@ View unique values in "region" category column to ensure categorical constraints
 unique(data$region)
 ```
 
-No unexpected values found. Convert $character column to factors
+No unexpected values found. Convert \$character column to factors
 
 ```{r}
 data <- data %>%
@@ -111,8 +107,7 @@ data <- data %>%
                 ~as_factor(.)))
 ```
 
-Loop through numeric columns to see if they can be converted to integers in cleaning.
-Initializing with a vector instead of a list because we're only looping through 15 elements max
+Loop through numeric columns to see if they can be converted to integers in cleaning. Initializing with a vector instead of a list because we're only looping through 15 elements max
 
 ```{r}
 convert_to_integers <- character()
@@ -216,10 +211,7 @@ No duplicate rows found.
 
 Misc. remaining validation tasks:
 
-[x] String length violations (region has to be 5 or less characters)
-[x] Number range constraints (none of our numeric columns can be negative)
-[x] Cross-field validation (num_ili has to equal sum of age 0 through 5)
-[x] Start and end date validation (Data can't be before week 40 of 2014)
+\[x\] String length violations (region has to be 5 or less characters) \[x\] Number range constraints (none of our numeric columns can be negative) \[x\] Cross-field validation (num_ili has to equal sum of age 0 through 5) \[x\] Start and end date validation (Data can't be before week 40 of 2014)
 
 ```{r}
 # Misc. validation config
@@ -251,8 +243,14 @@ check <- confront(data, rules)
 summary(check)
 ```
 
-Write to parquet for type preservation
+Write to parquet for long-term storage
 
 ```{r}
 write_parquet(data, "validated_data.parquet")
+```
+
+Write to feather for fast intermediate reads
+
+```{r}
+write_feather(data, "validated_data.feather")
 ```
