@@ -1,0 +1,81 @@
+---
+title: "Forecasting"
+format: html
+editor: visual
+---
+
+Install and load dependencies
+
+```{r}
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+pacman::p_load(tidyverse, lubridate, nanoparquet, usethis, purrr, arrow, slider, fpp3, tseries)
+```
+
+Load data from feather file
+
+```{r}
+data <- read_feather("clean_and_features.feather")
+```
+
+Aggregate data for national percentages. Using mean on wili because we don't have access to the weights to do the calculations on unweighted ili data ourselves
+
+```{r}
+aggregated_data <- data %>%
+  group_by(epiweek) %>%
+  summarize(national_percentage = mean(wili, na.rm = TRUE)) %>%
+  ungroup()
+```
+
+Convert to tsibble object and plot:
+
+```{r}
+aggregated_data <- aggregated_data %>%
+  mutate(epiweek = as.Date(epiweek))
+
+aggregated_data <- as_tsibble(aggregated_data, index = epiweek)
+
+aggregated_data %>%
+  autoplot(national_percentage)
+```
+
+Autoplot reveals a clear seasonal pattern that looks stationary. Check ACF and PCF for more insights:
+
+```{r}
+aggregated_data %>%
+  ACF(national_percentage) %>%
+  autoplot()
+```
+
+```{r}
+aggregated_data %>%
+  PACF(national_percentage) %>%
+  autoplot()
+```
+
+Lag patterns combined show potential non-stationarity. Test for stationarity with ADF test:
+
+```{r}
+adf.test(aggregated_data$national_percentage)
+```
+
+p < 0.01 indicates stationarity in the original time series. Check seasonal patterns:
+
+```{r}
+aggregated_data %>%
+  mutate(
+    year = lubridate::year(epiweek),
+    week = lubridate::week(epiweek)
+  ) %>%
+  ggplot(aes(x = week, y = national_percentage, color = factor(year))) +
+  geom_line() +
+  labs(title = "Seasonal Pattern by Year",
+       x = "Week of Year",
+       y = "National Percentage",
+       color = "Year")
+```
+
+Timings of peaks and troughs are similar, with similar magnitudes (aside from 2018). This suggests a stable seasonal component as opposed to non-stationarity.This indicates we can proceed with seasonal modeling without requiring differencing.
+
+```{r}
+glimpse(aggregated_data)
+```

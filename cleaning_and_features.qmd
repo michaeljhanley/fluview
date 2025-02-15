@@ -67,5 +67,5 @@ glimpse(cleaned_data)
 Write to feather for fast intermediate reads
 
 ```{r}
-write_feather(cleaned_data, "dashboard_data.feather")
+write_feather(cleaned_data, "clean_and_features.feather")
 ```
